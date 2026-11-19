@@ -4,7 +4,7 @@
 
 ![Status](https://img.shields.io/badge/status-in%20development-orange)
 ![Language](https://img.shields.io/badge/language-C%2B%2B-blue)
-![License](https://img.shields.io/badge/license-GNU%20GPLv3-green)
+![License](https://img.shields.io/badge/license-MIT-green)
 
 ---
 
