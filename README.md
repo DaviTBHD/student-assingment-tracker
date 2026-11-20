@@ -2,7 +2,7 @@
 
 > A C++ command-line application for organizing assignments, tracking deadlines, and managing academic progress.
 
-![Status](https://img.shields.io/badge/status-in%20development-orange)
+![Status](https://img.shields.io/badge/status-working-brightgreen)
 ![Language](https://img.shields.io/badge/language-C%2B%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -12,15 +12,15 @@
 
 **Student Assignment Tracker** is a personal project created to practice C++ programming and software development fundamentals while building a useful tool for students.
 
-The application will start as a terminal-based program, with plans to add a graphical interface in the future.
+The current version runs in the terminal and supports managing assignments and their due dates.
 
-## ✨ Planned Features
+## ✨ Features
 
-- [ ] Add new assignments
-- [ ] View all assignments
-- [ ] Mark assignments as completed
-- [ ] Delete assignments
-- [ ] Track assignment deadlines
+- [x] Add new assignments
+- [x] View all assignments
+- [x] Mark assignments as completed
+- [x] Delete assignments
+- [x] Track assignment due dates
 - [ ] Save and load assignments from files
 - [ ] Track grades and academic progress
 
@@ -34,7 +34,7 @@ The application will start as a terminal-based program, with plans to add a grap
 
 ## 🚧 Project Status
 
-**In development — initial setup**
+**The terminal version is working. The graphical interface is still in development.**
 
 ## 🔮 Future Improvements
 
