@@ -1,0 +1,33 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Compilar tracker.exe",
+            "type": "process",
+            "command": "g++",
+            "args": [
+                "-std=c++17",
+                "-O2",
+                "-municode",
+                "-mwindows",
+                "-static",
+                "-o",
+                "tracker.exe",
+                "main.cpp",
+                "-lcomctl32",
+                "-lshell32",
+                "-lole32",
+                "-luuid",
+                "-lgdi32"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$gcc"
+        }
+    ]
+}
