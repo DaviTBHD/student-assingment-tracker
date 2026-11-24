@@ -41,23 +41,27 @@ The app opens a Windows desktop window in Portuguese. Use the form to add assign
 | Editor | Visual Studio Code |
 | Version Control | Git and GitHub |
 
-## 🚧 Build and Run
+## Temp Run
 
-Open the project folder in VS Code and press **Ctrl+Shift+B** to build with MinGW-w64. Then run `.\tracker.exe` in the integrated terminal.
+Use these steps to run the current version from source on Windows until a packaged release is available.
 
-From PowerShell in the project folder, run the build script. It also checks the WinGet installation of MinGW-w64 when `g++` is missing from PATH.
+1. Install MinGW-w64 with C++17 support if you don't already have it. The build script looks for `g++.exe` on `PATH` and checks the WinLibs installation under WinGet as a fallback.
+2. Open PowerShell in the project folder, where `main.cpp` and `build.ps1` are located.
+3. Compile the app. Wait for the `Build complete` message before continuing.
 
-```powershell
-.\build.ps1
-.\tracker.exe
-```
+   ```powershell
+   .\build.ps1
+   ```
 
-To invoke the compiler directly:
+   If PowerShell blocks the script because of its execution policy, run `powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`.
 
-```powershell
-g++ -std=c++17 -O2 -municode -mwindows -static -o tracker.exe main.cpp -lcomctl32 -lshell32 -lole32 -luuid -lgdi32
-.\tracker.exe
-```
+4. Run the generated local executable. The **Agenda de trabalhos** window should open.
+
+   ```powershell
+   .\tracker.exe
+   ```
+
+   You can also double-click `tracker.exe` in File Explorer. After editing `main.cpp`, close the app and repeat steps 3 and 4.
 
 Assignments are saved after each change in `%LOCALAPPDATA%\StudentAssignmentTracker\assignments.txt` and loaded when the app opens.
 
