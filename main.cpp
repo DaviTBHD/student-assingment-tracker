@@ -125,7 +125,63 @@ bool saveAssignments(const fs::path& path, const vector<Assignment>& assignments
 }
 
 namespace {
-constexpr wchar_t AppTitle[] = L"Agenda de trabalhos";
+bool usePortuguese = true;
+
+const wchar_t* translated(const wchar_t* portuguese, const wchar_t* english) {
+    return usePortuguese ? portuguese : english;
+}
+
+const wchar_t* appTitle() {
+    return translated(L"Agenda de trabalhos", L"Student Assignment Tracker");
+}
+
+enum LanguageChoice { Portuguese = 101, English };
+
+INT_PTR CALLBACK languageDialogProc(HWND dialog, UINT message, WPARAM wParam, LPARAM) {
+    if (message == WM_INITDIALOG) return TRUE;
+    if (message == WM_COMMAND) {
+        const int choice = LOWORD(wParam);
+        if (choice == Portuguese || choice == English || choice == IDCANCEL) {
+            EndDialog(dialog, choice);
+            return TRUE;
+        }
+    }
+    if (message == WM_CLOSE) {
+        EndDialog(dialog, IDCANCEL);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+INT_PTR chooseLanguage(HINSTANCE instance) {
+    // A standard Win32 dialog template stores its fields as WORDs.
+    constexpr DWORD dialogStyle = WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_CENTER;
+    vector<WORD> layout{LOWORD(dialogStyle), HIWORD(dialogStyle), 0, 0,
+                        3, 0, 0, 190, 64, 0, 0};
+    const auto appendText = [&layout](const wchar_t* text) {
+        while (*text) layout.push_back(*text++);
+        layout.push_back(0);
+    };
+    const auto appendControl = [&](DWORD style, WORD x, WORD y, WORD width, WORD height,
+                                   WORD id, WORD controlClass, const wchar_t* text) {
+        // Each control starts on a DWORD boundary.
+        if (layout.size() % 2 != 0) layout.push_back(0);
+        layout.insert(layout.end(), {LOWORD(style), HIWORD(style), 0, 0,
+                                     x, y, width, height, id, 0xFFFF, controlClass});
+        appendText(text);
+        layout.push_back(0);
+    };
+
+    appendText(L"Idioma / Language");
+    appendControl(WS_CHILD | WS_VISIBLE | SS_CENTER, 8, 12, 174, 12,
+                  static_cast<WORD>(-1), 0x0082, L"Escolha o idioma / Choose a language");
+    appendControl(WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 15, 34, 75, 18,
+                  Portuguese, 0x0080, L"Português");
+    appendControl(WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 100, 34, 75, 18,
+                  English, 0x0080, L"English");
+    return DialogBoxIndirectParamW(instance, reinterpret_cast<const DLGTEMPLATE*>(layout.data()),
+                                   nullptr, languageDialogProc, 0);
+}
 enum ControlId { Add = 100, Complete, Remove, List, Calendar };
 
 struct TrackerWindow {
@@ -156,13 +212,13 @@ struct TrackerWindow {
                            0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
         headingFont = CreateFontW(-32, 0, 0, 0, FW_SEMIBOLD, FALSE, FALSE, FALSE,
                                   DEFAULT_CHARSET, 0, 0, CLEARTYPE_QUALITY, 0, L"Segoe UI");
-        HWND title = control(L"STATIC", AppTitle, 0, 28, 22, 680, 43);
+        HWND title = control(L"STATIC", appTitle(), 0, 28, 22, 680, 43);
         SendMessageW(title, WM_SETFONT, reinterpret_cast<WPARAM>(headingFont), TRUE);
         summary = control(L"STATIC", L"", 0, 30, 69, 680, 25);
 
-        control(L"STATIC", L"Disciplina", 0, 30, 113, 165, 23);
-        control(L"STATIC", L"Nome do trabalho", 0, 209, 113, 255, 23);
-        control(L"STATIC", L"Prazo (AAAA-MM-DD)", 0, 479, 113, 220, 23);
+        control(L"STATIC", translated(L"Disciplina", L"Course"), 0, 30, 113, 165, 23);
+        control(L"STATIC", translated(L"Nome do trabalho", L"Assignment Name"), 0, 209, 113, 255, 23);
+        control(L"STATIC", translated(L"Prazo (AAAA-MM-DD)", L"Due Date (YYYY-MM-DD)"), 0, 479, 113, 220, 23);
         course = control(L"EDIT", L"", WS_TABSTOP | ES_AUTOHSCROLL,
                          30, 140, 165, 30, 0, WS_EX_CLIENTEDGE);
         name = control(L"EDIT", L"", WS_TABSTOP | ES_AUTOHSCROLL,
@@ -172,13 +228,13 @@ struct TrackerWindow {
         SendMessageW(course, EM_SETLIMITTEXT, 200, 0);
         SendMessageW(name, EM_SETLIMITTEXT, 200, 0);
         SendMessageW(date, EM_SETLIMITTEXT, 10, 0);
-        control(L"BUTTON", L"Adicionar trabalho", WS_TABSTOP | BS_PUSHBUTTON,
+        control(L"BUTTON", translated(L"Adicionar trabalho", L"Add Assignment"), WS_TABSTOP | BS_PUSHBUTTON,
                 30, 185, 176, 36, Add);
 
         list = control(WC_LISTVIEWW, L"", WS_TABSTOP | LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS,
                        30, 244, 669, 240, List, WS_EX_CLIENTEDGE);
         ListView_SetExtendedListViewStyle(list, LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-        const wchar_t* headers[] = {L"Disciplina", L"Trabalho", L"Prazo", L"Status"};
+        const wchar_t* headers[] = {translated(L"Disciplina", L"Course"), translated(L"Trabalho", L"Assignment"), translated(L"Prazo", L"Due Date"), L"Status"};
         const int widths[] = {145, 259, 119, 117};
         for (int i = 0; i < 4; ++i) {
             LVCOLUMNW column{};
@@ -188,12 +244,12 @@ struct TrackerWindow {
             ListView_InsertColumn(list, i, &column);
         }
 
-        complete = control(L"BUTTON", L"Marcar como concluído", WS_TABSTOP,
+        complete = control(L"BUTTON", translated(L"Marcar como concluído", L"Mark as Complete"), WS_TABSTOP,
                            30, 502, 205, 36, Complete);
-        remove = control(L"BUTTON", L"Excluir trabalho", WS_TABSTOP, 247, 502, 158, 36, Remove);
+        remove = control(L"BUTTON", translated(L"Excluir trabalho", L"Delete Assignment"), WS_TABSTOP, 247, 502, 158, 36, Remove);
         status = control(L"STATIC", L"", 0, 30, 552, 669, 30);
 
-        control(L"STATIC", L"Calendário de prazos", 0, 724, 113, 245, 23);
+        control(L"STATIC", translated(L"Calendário de prazos", L"Deadline Calendar"), 0, 724, 113, 245, 23);
         calendar = control(MONTHCAL_CLASSW, L"", WS_TABSTOP | MCS_DAYSTATE,
                            724, 140, 245, 215, Calendar);
         RECT calendarBounds{};
@@ -201,11 +257,11 @@ struct TrackerWindow {
             SetWindowPos(calendar, nullptr, 0, 0, calendarBounds.right, calendarBounds.bottom,
                          SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
         }
-        control(L"STATIC", L"Negrito indica prazo pendente.", 0, 724, 371, 245, 25);
+        control(L"STATIC", translated(L"Negrito indica prazo pendente.", L"Bold dates have pending work."), 0, 724, 371, 245, 25);
         daySummary = control(L"STATIC", L"", 0, 724, 407, 245, 65);
 
         refreshList();
-        if (assignments.empty()) SetWindowTextW(status, L"Preencha os campos acima para adicionar um trabalho.");
+        if (assignments.empty()) SetWindowTextW(status, translated(L"Preencha os campos acima para adicionar um trabalho.", L"Fill in the fields above to add an assignment."));
     }
 
     vector<MONTHDAYSTATE> pendingDays(SYSTEMTIME start, int months) const {
@@ -240,9 +296,9 @@ struct TrackerWindow {
 
         const wstring message = selectedDate + L"\r\n" +
             (pending == 0 && completed == 0
-                ? L"Nenhum trabalho nesta data."
-                : to_wstring(pending) + L" pendente(s) / " +
-                  to_wstring(completed) + L" concluído(s)");
+                ? translated(L"Nenhum trabalho nesta data.", L"No assignments on this date.")
+                : to_wstring(pending) + translated(L" pendente(s) / ", L" pending / ") +
+                  to_wstring(completed) + translated(L" concluído(s)", L" completed"));
         SetWindowTextW(daySummary, message.c_str());
     }
 
@@ -277,12 +333,12 @@ struct TrackerWindow {
             ListView_SetItemText(list, index, 1, const_cast<wchar_t*>(assignment.name.c_str()));
             ListView_SetItemText(list, index, 2, const_cast<wchar_t*>(assignment.dueDate.c_str()));
             ListView_SetItemText(list, index, 3,
-                                 const_cast<wchar_t*>(assignment.completed ? L"Concluído" : L"Pendente"));
+                                 const_cast<wchar_t*>(assignment.completed ? translated(L"Concluído", L"Completed") : translated(L"Pendente", L"Pending")));
         }
         const auto completed = count_if(assignments.begin(), assignments.end(),
                                              [](const auto& item) { return item.completed; });
-        const wstring counts = to_wstring(assignments.size() - completed) + L" pendentes   /   " +
-                                    to_wstring(completed) + L" concluídos";
+        const wstring counts = to_wstring(assignments.size() - completed) + translated(L" pendentes   /   ", L" pending   /   ") +
+                                    to_wstring(completed) + translated(L" concluídos", L" completed");
         SetWindowTextW(summary, counts.c_str());
         if (selection >= 0) {
             ListView_SetItemState(list, selection, LVIS_SELECTED | LVIS_FOCUSED, LVIS_SELECTED | LVIS_FOCUSED);
@@ -302,7 +358,7 @@ struct TrackerWindow {
 
     bool commit(vector<Assignment> next, const wchar_t* message, int selection) {
         if (!saveAssignments(dataFile, next)) {
-            MessageBoxW(window, L"Não foi possível salvar. Tente novamente.", AppTitle, MB_OK | MB_ICONERROR);
+            MessageBoxW(window, translated(L"Não foi possível salvar. Tente novamente.", L"Could not save assignments. Try again."), appTitle(), MB_OK | MB_ICONERROR);
             return false;
         }
         assignments = move(next);
@@ -314,19 +370,19 @@ struct TrackerWindow {
     void add() {
         Assignment assignment{textOf(course), textOf(name), textOf(date)};
         if (assignment.course.empty() || assignment.name.empty()) {
-            SetWindowTextW(status, L"Preencha a disciplina e o nome do trabalho.");
+            SetWindowTextW(status, translated(L"Preencha a disciplina e o nome do trabalho.", L"Enter the course and assignment name."));
             SetFocus(assignment.course.empty() ? course : name);
             return;
         }
         if (!isValidDate(assignment.dueDate)) {
-            SetWindowTextW(status, L"Informe uma data válida no formato AAAA-MM-DD.");
+            SetWindowTextW(status, translated(L"Informe uma data válida no formato AAAA-MM-DD.", L"Enter a valid date in YYYY-MM-DD format."));
             SetFocus(date);
             return;
         }
         assignment.dueDate[4] = assignment.dueDate[7] = L'-';
         auto next = assignments;
         next.push_back(move(assignment));
-        if (commit(move(next), L"Trabalho adicionado e salvo.", static_cast<int>(assignments.size()))) {
+        if (commit(move(next), translated(L"Trabalho adicionado e salvo.", L"Assignment added and saved."), static_cast<int>(assignments.size()))) {
             SetWindowTextW(course, L"");
             SetWindowTextW(name, L"");
             SetWindowTextW(date, L"");
@@ -342,11 +398,11 @@ struct TrackerWindow {
         if (action == Complete) {
             if (next[selection].completed) return;
             next[selection].completed = true;
-            commit(move(next), L"Trabalho marcado como concluído.", selection);
-        } else if (MessageBoxW(window, L"Excluir o trabalho selecionado?", AppTitle,
+            commit(move(next), translated(L"Trabalho marcado como concluído.", L"Assignment marked as complete."), selection);
+        } else if (MessageBoxW(window, translated(L"Excluir o trabalho selecionado?", L"Delete the selected assignment?"), appTitle(),
                                MB_YESNO | MB_DEFBUTTON2 | MB_ICONQUESTION) == IDYES) {
             next.erase(next.begin() + selection);
-            commit(move(next), L"Trabalho excluído.", -1);
+            commit(move(next), translated(L"Trabalho excluído.", L"Assignment deleted."), -1);
         }
     }
 };
@@ -394,7 +450,7 @@ int showTracker(HINSTANCE instance, int show, const fs::path& dataFile) {
     TrackerWindow tracker;
     tracker.dataFile = dataFile;
     if (!loadAssignments(dataFile, tracker.assignments)) {
-        MessageBoxW(nullptr, L"Não foi possível carregar o arquivo de trabalhos.", AppTitle, MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, translated(L"Não foi possível carregar o arquivo de trabalhos.", L"Could not load the assignments file."), appTitle(), MB_OK | MB_ICONERROR);
         return 1;
     }
 
@@ -411,7 +467,7 @@ int showTracker(HINSTANCE instance, int show, const fs::path& dataFile) {
     constexpr DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
     RECT bounds{0, 0, 995, 595};
     AdjustWindowRect(&bounds, style, FALSE);
-    HWND window = CreateWindowExW(WS_EX_CONTROLPARENT, windowClass.lpszClassName, AppTitle, style,
+    HWND window = CreateWindowExW(WS_EX_CONTROLPARENT, windowClass.lpszClassName, appTitle(), style,
                                    CW_USEDEFAULT, CW_USEDEFAULT, bounds.right - bounds.left,
                                    bounds.bottom - bounds.top, nullptr, nullptr, instance, &tracker);
     if (!window) return 1;
@@ -434,9 +490,18 @@ int showTracker(HINSTANCE instance, int show, const fs::path& dataFile) {
 }
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+    const INT_PTR language = chooseLanguage(instance);
+    if (language == -1) return 1;
+    if (language == IDCANCEL) return 0;
+    usePortuguese = language == Portuguese;
+    const LANGID languageId = usePortuguese ? MAKELANGID(LANG_PORTUGUESE, SUBLANG_PORTUGUESE_BRAZILIAN)
+                                             : MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
+    SetThreadLocale(MAKELCID(languageId, SORT_DEFAULT));
+    SetThreadPreferredUILanguages(MUI_LANGUAGE_NAME, usePortuguese ? L"pt-BR\0" : L"en-US\0", nullptr);
+
     PWSTR localAppData = nullptr;
     if (FAILED(SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppData))) {
-        MessageBoxW(nullptr, L"A pasta de dados do usuário está indisponível.", AppTitle, MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, translated(L"A pasta de dados do usuário está indisponível.", L"The user data folder is unavailable."), appTitle(), MB_OK | MB_ICONERROR);
         return 1;
     }
     const fs::path directory = fs::path(localAppData) / L"StudentAssignmentTracker";
@@ -445,16 +510,16 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     error_code error;
     fs::create_directories(directory, error);
     if (error) {
-        MessageBoxW(nullptr, L"Não foi possível preparar a pasta de dados.", AppTitle, MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, translated(L"Não foi possível preparar a pasta de dados.", L"Could not prepare the data folder."), appTitle(), MB_OK | MB_ICONERROR);
         return 1;
     }
     HANDLE lock = CreateFileW((directory / L"assignments.lock").c_str(), GENERIC_WRITE, 0, nullptr,
                               OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (lock == INVALID_HANDLE_VALUE) {
         const wchar_t* message = GetLastError() == ERROR_SHARING_VIOLATION
-            ? L"A agenda já está aberta."
-            : L"Não foi possível acessar a pasta de dados.";
-        MessageBoxW(nullptr, message, AppTitle, MB_OK | MB_ICONERROR);
+            ? translated(L"A agenda já está aberta.", L"The tracker is already open.")
+            : translated(L"Não foi possível acessar a pasta de dados.", L"Could not access the data folder.");
+        MessageBoxW(nullptr, message, appTitle(), MB_OK | MB_ICONERROR);
         return 1;
     }
     const int result = showTracker(instance, show, directory / L"assignments.txt");

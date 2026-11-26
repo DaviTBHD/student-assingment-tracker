@@ -12,11 +12,11 @@
 
 **Student Assignment Tracker** is a personal project created to practice C++ programming and software development fundamentals while building a useful tool for students.
 
-The app opens a Windows desktop window in Portuguese. Use the form to add assignments and select a row to mark it complete or delete it.
+The app asks you to choose **Português** or **English** each time it opens. Use the form to add assignments and select a row to mark it complete or delete it.
 
 ## What's New in v2
 
-- **Windows interface.** The original terminal menu was replaced with a Portuguese desktop window. It includes a form for adding assignments, a table with due dates and statuses, and a confirmation prompt before deletion.
+- **Windows interface.** The desktop window is available in Portuguese and English. It includes a form for adding assignments, a table with due dates and statuses, and a confirmation prompt before deletion.
 - **Automatic saving.** Adding, completing, or deleting an assignment saves the updated list. The tracker restores assignments and their statuses the next time it opens.
 - **Deadline calendar.** Dates with pending assignments appear in bold. Select a date to see how many assignments are pending or completed that day.
 - **Windows executable.** Once built, `tracker.exe` opens with a double-click in File Explorer.
@@ -55,7 +55,7 @@ Use these steps to run the current version from source on Windows until a packag
 
    If PowerShell blocks the script because of its execution policy, run `powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1`.
 
-4. Run the generated local executable. The **Agenda de trabalhos** window should open.
+4. Run the generated local executable and choose **Português** or **English** in the startup dialog.
 
    ```powershell
    .\tracker.exe
