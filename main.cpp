@@ -317,7 +317,10 @@ struct TrackerWindow {
     void updateActions() const {
         const int selection = ListView_GetNextItem(list, -1, LVNI_SELECTED);
         EnableWindow(remove, selection >= 0);
-        EnableWindow(complete, selection >= 0 && !assignments[selection].completed);
+        EnableWindow(complete,
+                     selection >= 0 &&
+                     static_cast<size_t>(selection) < assignments.size() &&
+                     !assignments[selection].completed);
     }
 
     void refreshList(int selection = -1) {
